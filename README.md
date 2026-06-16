@@ -39,4 +39,35 @@ Each folder has its own README with the exercise description and step-by-step ru
 ---
 
 ## API key
-You'll need an Anthropic API key for all build-along sessions. Each notebook has a cell near the top where you paste it in.
+You'll need an Anthropic API key for all build-along sessions — and you don't need a terminal to set it. Run the notebook's setup cell once: it creates a gitignored **`.env`** file. Open it, paste your key after `ANTHROPIC_API_KEY=`, save, and re-run — a green **"✓ API key verified"** banner confirms you're connected. The key lives in `.env`, never in a notebook cell (notebooks have a way of ending up in client repos), it survives kernel restarts, and a single `.env` at the repo root serves every exercise.
+
+Prefer to set it once for everything? That works too:
+
+```bash
+export ANTHROPIC_API_KEY=your_key_here   # your shell, the VS Code terminal, or a local .env
+```
+
+---
+
+## Where to run
+These build-alongs are meant to run in your own tooling, not a browser scratchpad — and never by pasting code out of a chat window:
+
+- **VS Code / Cursor** — open the folder, then the notebook (Jupyter extension) or run the `.py` in the terminal.
+- **Claude Code (CLI)** — `claude` inside the repo: run the `.py`, or work the exercise with Claude Code as your pair.
+- **Claude Desktop** — keep it open alongside as your AI pair for concepts and debugging.
+
+Each session's README has the exact steps.
+
+---
+
+## Setup & troubleshooting
+
+The notebooks install what they need on first run and survive locked-down corporate Pythons
+(the `externally-managed-environment` / PEP 668 error, no-admin machines, proxies). If you hit
+a wall, **[SETUP.md](SETUP.md)** is the one-page fix — it covers the venv path, the VS Code
+"wrong kernel" trap, and corporate-proxy installs. For a pinned environment up front:
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
