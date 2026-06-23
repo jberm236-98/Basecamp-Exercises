@@ -12,11 +12,11 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
        font:14px/1.45 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  .wrap{max-width:1000px;margin:0 auto;padding:18px}
+  .wrap{max-width:1060px;margin:0 auto;padding:18px}
   h1{font-size:20px;margin:0 0 2px} .sub{color:var(--muted);font-size:12px;margin-bottom:12px}
   .warn{background:#3a1d1d;border:1px solid #5a2a2a;color:#ffd5d5;padding:8px 12px;
         border-radius:8px;font-size:12px;margin-bottom:14px}
-  .grid{display:grid;grid-template-columns:300px 1fr;gap:14px}
+  .grid{display:grid;grid-template-columns:310px 1fr;gap:14px}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
   .pill{display:inline-block;padding:4px 12px;border-radius:999px;font-weight:700;
         letter-spacing:.04em;font-size:13px}
@@ -39,13 +39,32 @@
   th,td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
   th{color:var(--muted);font-weight:600} .tag{font-weight:700}
   .foot{color:var(--muted);font-size:11px;margin-top:10px}
+
+  /* Controls */
+  .ctrl-sep{border:none;border-top:1px solid var(--line);margin:12px 0 8px}
+  .ctrl-hd{color:var(--muted);font-size:10px;letter-spacing:.08em;font-weight:700;margin-bottom:8px;text-transform:uppercase}
+  .ctrl-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:12px}
+  .ctrl-row label{color:var(--muted);flex-shrink:0}
+  .seg{display:flex;gap:2px}
+  .seg button{background:#0c1116;border:1px solid var(--line);color:var(--muted);
+    padding:3px 8px;border-radius:4px;cursor:pointer;font-size:11px;transition:all .15s}
+  .seg button.active,.seg button:hover{background:var(--accent);border-color:var(--accent);color:#000;font-weight:700}
+  .tog{background:#0c1116;border:1px solid var(--line);color:var(--muted);
+    padding:3px 12px;border-radius:4px;cursor:pointer;font-size:11px;transition:all .15s;min-width:42px}
+  .tog.on{background:#37d67a;border-color:#37d67a;color:#06140c;font-weight:700}
+  input[type=time]{background:#0c1116;border:1px solid var(--line);color:var(--ink);
+    border-radius:4px;padding:2px 6px;font-size:11px;width:86px;color-scheme:dark}
+  input[type=range]{accent-color:var(--accent);cursor:pointer;width:80px}
+  .speed-lbl{color:var(--ink);font-variant-numeric:tabular-nums;margin-left:4px}
+  .recalc{font-size:10px;color:var(--accent);margin-left:6px;opacity:0;transition:opacity .2s}
+  .recalc.show{opacity:1}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>🍸 Ballmer — live BAC dashboard</h1>
   <div class="sub" id="sub">connecting…</div>
-  <div class="warn">⚠ The “Ballmer Peak” (0.129–0.138% BAC) is a joke from XKCD #323. It is far above
+  <div class="warn">⚠ The "Ballmer Peak" (0.129–0.138% BAC) is a joke from XKCD #323. It is far above
     every legal driving limit and is <b>not</b> health or safety advice. Do not drive. Modeling demo only.</div>
 
   <div class="grid">
@@ -70,6 +89,42 @@
         <div class="kv"><span>k_a (absorp)</span><span id="m_k">—</span></div>
         <div class="kv"><span>profile</span><span id="m_p">—</span></div>
       </div>
+
+      <!-- Controls -->
+      <hr class="ctrl-sep" />
+      <div style="display:flex;align-items:center">
+        <div class="ctrl-hd" style="margin-bottom:0">Controls</div>
+        <span class="recalc" id="recalc">recalculating…</span>
+      </div>
+
+      <div class="ctrl-row" style="margin-top:8px">
+        <label>Start time</label>
+        <input type="time" id="ctl-start" value="19:00" />
+      </div>
+
+      <div class="ctrl-row">
+        <label>Food state</label>
+        <div class="seg" id="ctl-food">
+          <button data-val="empty">empty</button>
+          <button data-val="light" class="active">light</button>
+          <button data-val="full">full</button>
+        </div>
+      </div>
+
+      <div class="ctrl-row">
+        <label>Auto-consume</label>
+        <button class="tog on" id="ctl-auto">ON</button>
+      </div>
+
+      <div class="ctrl-row">
+        <label>Speed <span class="speed-lbl" id="ctl-speed-lbl">2.0s</span>/tick</label>
+        <input type="range" id="ctl-speed" min="0.5" max="5" step="0.5" value="2.0" />
+      </div>
+
+      <div class="ctrl-row">
+        <label>Loop</label>
+        <button class="tog on" id="ctl-loop">ON</button>
+      </div>
     </div>
 
     <div class="panel">
@@ -87,6 +142,7 @@
 <script>
 const COL = {BELOW_WINDOW:"#3fb6e0", IN_WINDOW:"#37d67a", ABOVE_WINDOW:"#f5a623", PAST_CEILING:"#ef4444"};
 let META=null;
+let CTL={food_state:"light", auto_consume:true, speed:2.0, loop:true, start_time:"19:00"};
 
 async function getJSON(u){ const r=await fetch(u); return r.json(); }
 
@@ -183,8 +239,7 @@ function render(s){
   draw(s);
 }
 
-async function init(){
-  META=await getJSON("/api/meta");
+function updateMetaUI(){
   document.getElementById("sub").textContent =
     "always-on agent · ticking a simulated bar night · session start "+
     new Date(META.session_start).toLocaleTimeString();
@@ -195,8 +250,87 @@ async function init(){
     META.profile.height_in+"in / "+META.profile.weight_lb+"lb / "+META.profile.age+" / "+META.profile.sex;
   document.getElementById("foot").textContent=
     "Engine: Widmark + Watson TBW + first-order absorption. Predictions are approximate; see reference/model-assumptions.md.";
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+
+async function postConfig(patch){
+  const recalc = document.getElementById("recalc");
+  recalc.classList.add("show");
+  Object.assign(CTL, patch);
+  try{
+    await fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(patch)});
+    META = await getJSON("/api/meta");
+    updateMetaUI();
+  }finally{
+    recalc.classList.remove("show");
+  }
+}
+
+// Food state
+document.querySelectorAll("#ctl-food button").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll("#ctl-food button").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    postConfig({food_state: btn.dataset.val});
+  });
+});
+
+// Start time
+document.getElementById("ctl-start").addEventListener("change", e=>{
+  postConfig({start_time: e.target.value});
+});
+
+// Auto-consume
+document.getElementById("ctl-auto").addEventListener("click",()=>{
+  CTL.auto_consume = !CTL.auto_consume;
+  const btn = document.getElementById("ctl-auto");
+  btn.textContent = CTL.auto_consume ? "ON" : "OFF";
+  btn.classList.toggle("on", CTL.auto_consume);
+  postConfig({auto_consume: CTL.auto_consume});
+});
+
+// Speed — update label live, post on release
+document.getElementById("ctl-speed").addEventListener("input", e=>{
+  document.getElementById("ctl-speed-lbl").textContent = parseFloat(e.target.value).toFixed(1)+"s";
+});
+document.getElementById("ctl-speed").addEventListener("change", e=>{
+  postConfig({speed: parseFloat(e.target.value)});
+});
+
+// Loop
+document.getElementById("ctl-loop").addEventListener("click",()=>{
+  CTL.loop = !CTL.loop;
+  const btn = document.getElementById("ctl-loop");
+  btn.textContent = CTL.loop ? "ON" : "OFF";
+  btn.classList.toggle("on", CTL.loop);
+  postConfig({loop: CTL.loop});
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+async function init(){
+  [META, CTL] = await Promise.all([getJSON("/api/meta"), getJSON("/api/config")]);
+  updateMetaUI();
+
+  // Sync controls to server state
+  document.getElementById("ctl-start").value = CTL.start_time || "19:00";
+  document.querySelectorAll("#ctl-food button").forEach(b=>{
+    b.classList.toggle("active", b.dataset.val === CTL.food_state);
+  });
+  const autoBtn = document.getElementById("ctl-auto");
+  autoBtn.textContent = CTL.auto_consume ? "ON" : "OFF";
+  autoBtn.classList.toggle("on", CTL.auto_consume);
+  const speedEl = document.getElementById("ctl-speed");
+  speedEl.value = CTL.speed;
+  document.getElementById("ctl-speed-lbl").textContent = parseFloat(CTL.speed).toFixed(1)+"s";
+  const loopBtn = document.getElementById("ctl-loop");
+  loopBtn.textContent = CTL.loop ? "ON" : "OFF";
+  loopBtn.classList.toggle("on", CTL.loop);
+
   poll(); setInterval(poll, 1000);
 }
+
 async function poll(){ try{ render(await getJSON("/api/state")); }catch(e){} }
 init();
 </script>

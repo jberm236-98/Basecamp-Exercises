@@ -151,7 +151,8 @@ def tick(events: list[DrinkEvent], st: State, now_hours: float,
 
 def run_session(root: str | Path = ".", auto_consume: bool = True,
                 food_state: str = config.DEFAULT_FOOD_STATE,
-                write_log: bool = True) -> SessionRecord:
+                write_log: bool = True,
+                start_time_str: str | None = None) -> SessionRecord:
     """Fast-forward the whole night, ticking every tick_interval_min.
 
     auto_consume: if True, when the agent recommends ORDER the simulated drinker
@@ -160,6 +161,9 @@ def run_session(root: str | Path = ".", auto_consume: bool = True,
     free and demonstrates the agent steering the night.
     """
     st = load_state(root)
+    if start_time_str:
+        h, m = map(int, start_time_str.split(":"))
+        st.session_start = st.session_start.replace(hour=h, minute=m, second=0)
     events = list(st.events)
 
     dt_h = st.tick_interval_min / 60.0

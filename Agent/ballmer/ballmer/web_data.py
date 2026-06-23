@@ -110,6 +110,7 @@ def session_meta(session: SessionRecord) -> dict:
     st = session.state
     return {
         "session_start": st.session_start.isoformat(),
+        "start_time": st.session_start.strftime("%H:%M"),
         "profile": st.profile,
         "r": round(st.body.r, 4),
         "beta": st.body.beta,
